@@ -44,7 +44,7 @@ from yt.geometry.grid_geometry_handler import \
 from yt.geometry.geometry_handler import \
     YTDataChunk
 from yt.data_objects.static_output import \
-    Dataset
+    GridDataset
 from yt.fields.field_info_container import \
     NullFunc
 from yt.utilities.logger import ytLogger as mylog
@@ -64,7 +64,7 @@ class EnzoGrid(AMRGridPatch):
         *filename* and *index*.
         """
         #All of the field parameters will be passed to us as needed.
-        AMRGridPatch.__init__(self, id, filename = None, index = index)
+        super(EnzoGrid, self).__init__(id, filename = None, index = index)
         self._children_ids = []
         self._parent_id = -1
         self.Level = -1
@@ -193,7 +193,7 @@ class EnzoHierarchy(GridIndex):
         else:
             self.float_type = 'float64'
 
-        GridIndex.__init__(self, ds, dataset_type)
+        super(EnzoHierarchy, self).__init__(ds, dataset_type)
         # sync it back
         self.dataset.dataset_type = self.dataset_type
 
@@ -555,7 +555,7 @@ class EnzoHierarchyInMemory(EnzoHierarchy):
         self.dataset = weakref.proxy(ds) # for _obtain_enzo
         self.float_type = self.enzo.hierarchy_information["GridLeftEdge"].dtype
         self.directory = os.getcwd()
-        GridIndex.__init__(self, ds, dataset_type)
+        super(EnzoHierarchyInMemory, self).__init__(ds, dataset_type)
 
     def _initialize_data_storage(self):
         pass
@@ -665,7 +665,7 @@ class EnzoHierarchy2D(EnzoHierarchy):
         if nap is not None:
             raise NotImplementedError
 
-class EnzoDataset(Dataset):
+class EnzoDataset(GridDataset):
     """
     Enzo-specific output, set at a fixed time.
     """
@@ -695,8 +695,8 @@ class EnzoDataset(Dataset):
         if conversion_override is None: conversion_override = {}
         self._conversion_override = conversion_override
         self.storage_filename = storage_filename
-        Dataset.__init__(self, filename, dataset_type, file_style=file_style,
-                         units_override=units_override, unit_system=unit_system)
+        super(EnzoDataset, self).__init__(filename, dataset_type, file_style=file_style,
+                units_override=units_override, unit_system=unit_system)
 
     def _setup_1d(self):
         self._index_class = EnzoHierarchy1D
@@ -967,7 +967,8 @@ class EnzoDatasetInMemory(EnzoDataset):
         if conversion_override is None: conversion_override = {}
         self._conversion_override = conversion_override
 
-        Dataset.__init__(self, "InMemoryParameterFile", self._dataset_type)
+        super(EnzoDatasetInMemory, self).__init__("InMemoryParameterFile",
+                self._dataset_type)
 
     def _parse_parameter_file(self):
         enzo = self._obtain_enzo()

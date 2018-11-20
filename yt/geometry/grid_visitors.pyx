@@ -136,7 +136,7 @@ cdef class MaskGridCells(GridVisitor):
             self.last_grid_index = grid.index
             self.arrpos_info[self.arrpos_index, 0] = grid.index
             self.arrpos_info[self.arrpos_index, 1] = self.count
-        self.arrpos_info[self.arrpos_index, 2] += 1
+        self.arrpos_info[self.arrpos_index, 2] += selected
 
 cdef class ICoordsGrids(GridVisitor):
     @cython.initializedcheck(False)

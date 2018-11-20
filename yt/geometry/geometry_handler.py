@@ -54,6 +54,9 @@ class Index(ParallelAnalysisInterface):
         mylog.debug("Initializing data grid data IO")
         self._setup_data_io()
 
+        mylog.debug("Setting up data files.")
+        self._setup_filenames()
+
         # Note that this falls under the "geometry" object since it's
         # potentially quite expensive, and should be done with the indexing.
         mylog.debug("Detecting fields.")

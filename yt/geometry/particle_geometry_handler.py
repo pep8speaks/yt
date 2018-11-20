@@ -203,7 +203,6 @@ class ParticleIndex(Index):
 
     def _detect_output_fields(self):
         # TODO: Add additional fields
-        self._setup_filenames()
         dsl = []
         units = {}
         pcounts = self._get_particle_type_counts()

@@ -174,6 +174,8 @@ cdef class GridTreeSelector:
             grid_mask = np.ones(self.tree.num_grids, dtype="uint8")
         self.grid_mask = grid_mask
         cdef np.uint64_t ngrids = 0
+        self.array_start = {}
+        self.cell_count_by_grid = {}
         for i in range(self.tree.num_grids):
             if grid_mask[i] == 0: continue
             ngrids += 1
@@ -254,6 +256,8 @@ cdef class GridTreeSelector:
         # of grid positions, counts by grids, and so on.  We can now make this into
         # a dictionary.
         for i in range(arrpos_info.shape[0]):
+            if arrpos_info[i,2] == 0:
+                continue
             self.array_start[arrpos_info[i, 0]] = arrpos_info[i,1]
             self.cell_count_by_grid[arrpos_info[i, 0]] = arrpos_info[i,2]
         return self.cell_count

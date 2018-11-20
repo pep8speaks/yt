@@ -1553,20 +1553,14 @@ class GridDataFile(object):
     # fields to different files -- that is fine, as we're actually going to leave
     # the task of choosing when and where to read the fields to the IO handlers.
     # That means that, for instance, the filename attribute can be a string template.
-    def __init__(self, ds, io, filename, file_id, grids = None, index_range = None):
+    def __init__(self, ds, io, filename, collection_id, grid_id_values = None):
         self.ds = ds
         self.io = weakref.proxy(io)
         self.filename = filename
-        self.file_id = file_id
+        # collection_id is going to sometimes be the file id, sometimes not
+        self.collection_id = collection_id
         # index_range is for if we do a subset of grids
-        if index_range is None:
-            index_range = (None, None)
-        self.start, self.end = index_range
-        # Now we adjust our start/end, in case there are fewer particles than
-        # we realized
-        if self.start is None:
-            self.start = 0
-        self.end = max(self.total_particles.values()) + self.start
+        self.grid_id_values = grid_id_values
 
     def select(self, selector):
         pass
@@ -1578,17 +1572,15 @@ class GridDataFile(object):
         pass
 
     def __lt__(self, other):
-        if self.file_id != other.file_id:
-            return self.file_id < other.file_id
-        return self.start < other.start
+        # file_id will not be reused
+        return self.collection_id < other.collection_id
 
     def __eq__(self, other):
-        if self.file_id != other.file_id:
-            return False
-        return self.start == other.start
+        # This should only be true if they are the same object
+        return self.collection_id == other.collection_id
 
     def __hash__(self):
-        return hash((self.filename, self.file_id, self.start, self.end))
+        return hash((self.filename, self.collection_id, self.grid_id_values))
         
 class ParticleDataset(Dataset):
     _unit_base = None
@@ -1603,6 +1595,10 @@ class ParticleDataset(Dataset):
         super(ParticleDataset, self).__init__(
             filename, dataset_type=dataset_type, file_style=file_style,
             units_override=units_override, unit_system=unit_system)
+
+class GridDataset(Dataset):
+    _file_class = GridDataFile
+    _grid_chunk_size = None
 
 def validate_index_order(index_order):
     if index_order is None:

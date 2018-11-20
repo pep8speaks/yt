@@ -42,9 +42,6 @@ class GridIndex(Index):
                          "grid_dimensions")
 
     def _setup_geometry(self):
-        mylog.debug("Initializing grid files.")
-        self._setup_filenames()
-
         mylog.debug("Counting grids.")
         self._count_grids()
 
@@ -60,9 +57,6 @@ class GridIndex(Index):
         mylog.debug("Re-examining index")
         self._initialize_level_stats()
 
-        # This is to check that at *some* point we create self.data_files
-        assert(getattr(self, 'data_files', None) is not None)
-
     def __del__(self):
         del self.grid_dimensions
         del self.grid_left_edge
@@ -76,27 +70,27 @@ class GridIndex(Index):
         return self.dataset.parameters
 
     def _setup_filenames(self):
-        template = self.dataset.filename_template
-        if template is None:
-            # If the template is none, we will assume that data_files will be
-            # instantiated later.
-            return
-        nfiles = self.dataset.file_count
+        # We will do everything here assuming that the grid objects have associated
+        # filenames.
+        grids_by_file = {}
+        for g in self.grids:
+            if g.filename not in grids_by_file:
+                grids_by_file[g.filename] = []
+            grids_by_file[g.filename].append(g.id - g._id_offset)
+        for fn in grids_by_file:
+            # Sort these, to preserve some kind of order
+            grids_by_file[fn].sort()
         cls = self.dataset._file_class
         self.data_files = []
         # If _grid_chunk_size is not set, default to something enormous
         GRID_CHUNKSIZE = self.dataset._grid_chunk_size or (2 << 32)
         fi = 0
-        for i in range(int(nfiles)):
-            start = 0
-            end = start + GRID_CHUNKSIZE
-            df = cls(self.dataset, self.io, template % {'num': i}, fi, (start, end))
-            if df.total_grids == 0:
-                break
-            fi += 1
-            self.data_files.append(df)
-            start = end
-        self.total_grids = sum(df.total_grids for df in self.data_files)
+        for fn, grids in sorted(grids_by_file.items()):
+            for i in range(0, len(grids), GRID_CHUNKSIZE):
+                grids_ = grids[i:i+GRID_CHUNKSIZE]
+                df = cls(self.dataset, self.io, fn, fi, grids_)
+                self.data_files.append(df)
+                fi += 1
 
     def _detect_output_fields_backup(self):
         # grab fields from backup file as well, if present
@@ -338,22 +332,36 @@ class GridIndex(Index):
         TODO: Maybe this should be redone so that we don't modify dobj in
         place?
         """
-        indexer = None
-        if dobj._type_name == "grid":
-            dobj._chunk_info = np.empty(1, dtype='object')
-            dobj._chunk_info[0] = weakref.proxy(dobj)
-        # These next two lines, when uncommented, turn "on" the fast index.
+        # We take our inspiration from the particle geometry handler
+        if getattr(dobj, "_chunk_info", None) is None:
+            #if isinstance(dobj, ) # This is checking if we just want data
+            #from a grid or file
+            pass
+        # It's possible this needs to be indented?
+        # Not sure about this part:
+        #if dobj._type_name == "grid":
+        #    dobj._chunk_info = np.empty(1, dtype='object')
+        #    dobj._chunk_info[0] = weakref.proxy(dobj)
+        #
+        # This indexer is a selector we can use as input to subsequent selectors, too.
         indexer = self.grid_tree.selector()
         if getattr(dobj, "size", None) is None:
             dobj.size = self._count_selection(dobj, indexer = indexer)
         if getattr(dobj, "shape", None) is None:
             dobj.shape = (dobj.size,)
+        # We collect the *files* that are part of our selection, as well as our grids.
+        # Once the indexer has been initialized, which will happen during the counting,
+        # we can find the files to which everything belongs.
+        dobj._chunk_info = [f for f in self.data_files if 
+                 any(indexer.cell_count_by_grid.get(_, 0) > 0
+                 for _ in f.grid_id_values)]
         dobj._current_chunk = list(self._chunk_all(dobj, cache = False,
                                    indexer = indexer))[0]
 
     def _count_selection(self, dobj, grids = None, indexer = None):
         if indexer is not None:
             return indexer.count(dobj.selector)
+        raise NotImplementedError
         if grids is None: grids = dobj._chunk_info
         count = sum((g.count(dobj.selector) for g in grids))
         return count
@@ -388,7 +396,6 @@ class GridIndex(Index):
             # individual grids.
             yield YTDataChunk(dobj, "spatial", [g], size, cache = False)
 
-    _grid_chunksize = 1000
     def _chunk_io(self, dobj, cache=True, local_only=False,
                   preload_fields=None, chunk_sizing="auto"):
         # local_only is only useful for inline datasets and requires
@@ -396,23 +403,22 @@ class GridIndex(Index):
         if preload_fields is None:
             preload_fields = []
         preload_fields, _ = self._split_fields(preload_fields)
-        gfiles = defaultdict(list)
-        gobjs = getattr(dobj._current_chunk, "objs", dobj._chunk_info)
+        fobjs = getattr(dobj._current_chunk, "objs", dobj._chunk_info)
         indexer = dobj._current_chunk._indexer
-        file_order = []
-        for g in gobjs:
-            if g.filename not in file_order:
-                file_order.append(g.filename)
-            # Force to be a string because sometimes g.filename is None.
-            gfiles[str(g.filename)].append(g)
+        gobjs = sorted((self.grids[_] for _ in indexer.cell_count_by_grid),
+                       key = lambda a: a.id)
         # We can apply a heuristic here to make sure we aren't loading too
         # many grids all at once.
+        # 
+        # We need to re-enable this, but likely at a higher level when setting up the
+        # initial collections
+        GRID_CHUNKSIZE = self.dataset._grid_chunk_size or (2 << 32)
         if chunk_sizing == "auto":
             chunk_ngrids = len(gobjs)
             if chunk_ngrids > 0:
                 nproc = np.float(ytcfg.getint("yt", "__global_parallel_size"))
-                chunking_factor = np.ceil(self._grid_chunksize*nproc/chunk_ngrids).astype("int")
-                size = max(self._grid_chunksize//chunking_factor, 1)
+                chunking_factor = np.ceil(GRID_CHUNKSIZE*nproc/chunk_ngrids).astype("int")
+                size = max(GRID_CHUNKSIZE//chunking_factor, 1)
             else:
                 size = self._grid_chunksize
         elif chunk_sizing == "config_file":
@@ -420,24 +426,25 @@ class GridIndex(Index):
         elif chunk_sizing == "just_one":
             size = 1
         elif chunk_sizing == "old":
-            size = self._grid_chunksize
+            size = GRID_CHUNKSIZE
         else:
             raise RuntimeError("%s is an invalid value for the 'chunk_sizing' argument." % chunk_sizing)
-        for fn in file_order:
-            gs = gfiles[fn]
-            for grids in (gs[pos:pos + size] for pos
+        for f in fobjs:
+            # Now we have the data file...
+            gs = f.grid_id_values
+            for g_indices in (gs[pos:pos + size] for pos
                           in range(0, len(gs), size)):
                 this_loop = np.zeros(self.grids.size, "uint8")
-                for g in grids:
-                    this_loop[g.id - g._id_offset] = 1
+                for g_id in g_indices:
+                    # Note that we do not need to offset by _id_offset here
+                    this_loop[g_id] = 1
                 indexer2 = self.grid_tree.selector(this_loop)
                 # Now, the order of the grids array is probably not the same as
                 # the order in the indexer, so we need to ask the indexer
                 # to sort it.
-                chunk_size = self._count_selection(dobj, grids,
-                        indexer = indexer2)
+                chunk_size = self._count_selection(dobj, indexer = indexer2)
                 grids = self.grids[np.asarray(indexer2.grid_order)].tolist()
-                dc = YTDataChunk(dobj, "io", grids, chunk_size,
+                dc = YTDataChunk(dobj, "io", [f], chunk_size,
                         cache = cache, indexer = indexer2)
                 # We allow four full chunks to be included.
                 with self.io.preload(dc, preload_fields, 
