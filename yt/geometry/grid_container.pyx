@@ -234,16 +234,28 @@ cdef class GridTreeSelector:
     @cython.boundscheck(False)
     @cython.initializedcheck(False)
     def count(self, SelectorObject selector):
+        cdef np.uint64_t i
+        cdef np.ndarray[np.uint64_t, ndim=2] arrpos_info
         # Use the counting grid visitor
         if self.initialized == 1:
             return self.cell_count
         cdef MaskGridCells mask_visitor 
         mask_visitor = MaskGridCells()
+        arrpos_info = np.zeros((self.grid_order.shape[0], 3), dtype="uint64")
+        mask_visitor.arrpos_info = arrpos_info
+        mask_visitor.arrpos_index = -1
+        mask_visitor.last_grid_index = -1
         mask_visitor.mask = self.mask
         mask_visitor.count = 0
         self.visit_grids(mask_visitor, selector)
         self.cell_count = mask_visitor.count
         self.initialized = 1
+        # We now have an arrpos_info that is filled with the start location
+        # of grid positions, counts by grids, and so on.  We can now make this into
+        # a dictionary.
+        for i in range(arrpos_info.shape[0]):
+            self.array_start[arrpos_info[i, 0]] = arrpos_info[i,1]
+            self.cell_count_by_grid[arrpos_info[i, 0]] = arrpos_info[i,2]
         return self.cell_count
 
     def select_icoords(self, SelectorObject selector, np.int64_t size = -1):

@@ -130,6 +130,13 @@ cdef class MaskGridCells(GridVisitor):
         self.mask[self.global_index] = selected
         self.count += selected
         # No need to increment anything.
+        # Now we check if we need to update our arrpos
+        if selected == 1 and self.last_grid_index != grid.index:
+            self.arrpos_index += 1 # first time, it'll set to 0
+            self.last_grid_index = grid.index
+            self.arrpos_info[self.arrpos_index, 0] = grid.index
+            self.arrpos_info[self.arrpos_index, 1] = self.count
+        self.arrpos_info[self.arrpos_index, 2] += 1
 
 cdef class ICoordsGrids(GridVisitor):
     @cython.initializedcheck(False)

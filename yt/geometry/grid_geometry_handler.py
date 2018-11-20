@@ -359,10 +359,10 @@ class GridIndex(Index):
         return count
 
     def _chunk_all(self, dobj, cache = True, indexer = None):
-        gobjs = getattr(dobj._current_chunk, "objs", dobj._chunk_info)
+        fobjs = getattr(dobj._current_chunk, "objs", dobj._chunk_info)
         indexer = indexer or getattr(dobj._current_chunk, "_indexer",
             None)
-        yield YTDataChunk(dobj, "all", gobjs, dobj.size, 
+        yield YTDataChunk(dobj, "all", fobjs, dobj.size, 
                         cache, indexer = indexer)
         
     def _chunk_spatial(self, dobj, ngz, sort = None, preload_fields = None):

@@ -90,6 +90,15 @@ cdef class CountGridCells(GridVisitor):
 cdef class MaskGridCells(GridVisitor):
     cdef np.uint8_t[:] mask
     cdef np.uint64_t count
+    # these are both initialized to -1
+    cdef np.int64_t arrpos_index
+    cdef np.int64_t last_grid_index
+    # This is an array where the first dimension is the 
+    # grid index (as taken from the GridTreeNode object)
+    # and the second dimension is the index into an array of aggregate count at
+    # this location (i.e., the start index into a flattened array) and the
+    # count of masks.
+    cdef np.uint64_t[:,:] arrpos_info
 
 cdef class ICoordsGrids(GridVisitor):
     cdef np.int64_t[:,:] icoords

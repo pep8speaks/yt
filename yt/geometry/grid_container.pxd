@@ -44,6 +44,8 @@ cdef class GridTreeSelector:
     cdef np.uint64_t cell_count
     cdef public np.uint8_t initialized
     cdef np.uint64_t _counter
+    cdef public dict array_start
+    cdef public dict cell_count_by_grid
 
     cdef void visit_grids(self, GridVisitor visitor, SelectorObject selector)
     cdef void recursively_visit_grid(self,

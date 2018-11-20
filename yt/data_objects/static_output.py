@@ -1548,15 +1548,20 @@ class ParticleFile(object):
 
 @functools.total_ordering
 class GridDataFile(object):
-    def __init__(self, ds, io, filename, file_id, grids = None, range = None):
+    # This is an object that contains grids, in order, based on the way they are stored.
+    # One thing to keep in mind is that some data formats will output different
+    # fields to different files -- that is fine, as we're actually going to leave
+    # the task of choosing when and where to read the fields to the IO handlers.
+    # That means that, for instance, the filename attribute can be a string template.
+    def __init__(self, ds, io, filename, file_id, grids = None, index_range = None):
         self.ds = ds
         self.io = weakref.proxy(io)
         self.filename = filename
         self.file_id = file_id
-        if range is None:
-            range = (None, None)
-        self.start, self.end = range
-        self.total_particles = self.io._count_particles(self)
+        # index_range is for if we do a subset of grids
+        if index_range is None:
+            index_range = (None, None)
+        self.start, self.end = index_range
         # Now we adjust our start/end, in case there are fewer particles than
         # we realized
         if self.start is None:
@@ -1573,19 +1578,18 @@ class GridDataFile(object):
         pass
 
     def __lt__(self, other):
-        if self.filename != other.filename:
-            return self.filename < other.filename
+        if self.file_id != other.file_id:
+            return self.file_id < other.file_id
         return self.start < other.start
 
     def __eq__(self, other):
-        if self.filename != other.filename:
+        if self.file_id != other.file_id:
             return False
         return self.start == other.start
 
     def __hash__(self):
         return hash((self.filename, self.file_id, self.start, self.end))
         
-
 class ParticleDataset(Dataset):
     _unit_base = None
     filter_bbox = False
