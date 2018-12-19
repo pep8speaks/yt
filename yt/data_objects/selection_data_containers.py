@@ -924,11 +924,11 @@ class YTCutRegion(YTSelectionContainer3D):
         # Need to interpose for __getitem__, fwidth, fcoords, icoords, iwidth,
         # ires and get_data
 
-    def chunks(self, fields, chunking_style, **kwargs):
+    def chunks(self, fields, chunk_type, **kwargs):
         # We actually want to chunk the sub-chunk, not ourselves.  We have no
         # chunks to speak of, as we do not data IO.
         for chunk in self.index._chunk(self.base_object,
-                                       chunking_style,
+                                       chunk_type,
                                        **kwargs):
             with self.base_object._chunked_read(chunk):
                 with self._chunked_read(chunk):

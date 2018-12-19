@@ -1293,7 +1293,7 @@ class YTSelectionContainer(YTDataContainer, ParallelAnalysisInterface):
             self._selector = sclass(self)
         return self._selector
 
-    def chunks(self, fields, chunking_style, **kwargs):
+    def chunks(self, fields, chunk_type, **kwargs):
         # This is an iterator that will yield the necessary chunks.
         self.get_data() # Ensure we have built ourselves
         if fields is None: fields = []
@@ -1303,7 +1303,7 @@ class YTSelectionContainer(YTDataContainer, ParallelAnalysisInterface):
         chunk_ind = kwargs.pop("chunk_ind", None)
         if chunk_ind is not None:
             chunk_ind = ensure_list(chunk_ind)
-        for ci, chunk in enumerate(self.index._chunk(self, chunking_style,
+        for ci, chunk in enumerate(self.index._chunk(self, chunk_type,
                                    **kwargs)):
             if chunk_ind is not None and ci not in chunk_ind:
                 continue

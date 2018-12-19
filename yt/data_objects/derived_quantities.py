@@ -69,7 +69,7 @@ class DerivedQuantity(ParallelAnalysisInterface):
         # create the index if it doesn't exist yet
         self.data_source.ds.index
         self.count_values(*args, **kwargs)
-        chunks = self.data_source.chunks([], chunking_style="io")
+        chunks = self.data_source.chunks([], chunk_type="io")
         storage = {}
         for sto, ds in parallel_objects(chunks, -1, storage = storage):
             sto.result = self.process_chunk(ds, *args, **kwargs)

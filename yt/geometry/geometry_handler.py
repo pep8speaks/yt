@@ -17,6 +17,7 @@ Geometry container base class.
 import os
 from yt.extern.six.moves import cPickle
 import weakref
+from collections import OrderedDict
 from yt.utilities.on_demand_imports import _h5py as h5py
 import numpy as np
 
@@ -29,6 +30,41 @@ from yt.utilities.logger import ytLogger as mylog
 from yt.utilities.parallel_tools.parallel_analysis_interface import \
     ParallelAnalysisInterface, parallel_root_only
 from yt.utilities.exceptions import YTFieldNotFound
+
+class IndexManager:
+    def __init__(self, dataset):
+        self.ds = self.dataset = weakref.proxy(ds)
+
+        self.indices = OrderedDict()
+
+    def add_index(self, index, name = None):
+        if name is None:
+            name = "index_%02i" % (len(self.indices))
+        self.indices[name] = index
+
+    def _split_fields(self, fields):
+        # This will split fields into either generated or read fields
+        fields_to_read, fields_to_generate = [], []
+        for ftype, fname in fields:
+            if fname in self.field_list or (ftype, fname) in self.field_list:
+                fields_to_read.append((ftype, fname))
+            elif fname in self.ds.derived_field_list or (ftype, fname) in self.ds.derived_field_list:
+                fields_to_generate.append((ftype, fname))
+            else:
+                raise YTFieldNotFound((ftype,fname), self.ds)
+        return fields_to_read, fields_to_generate
+
+    def chunk_iter(self, dobj, chunk_type, chunk_args = None):
+        chunk_args = chunk_args or {}
+        # We iterate over each of the chunks.  The only reason we would need to
+        # initialize a base chunk for them would be if we used that as a
+        # basis for later subdividing, which I think we can get around.
+        for name, index in self.indices.items():
+            yield from index.chunk_iter(dobj, chunk_type, chunk_args)
+
+    def chunk_sizes(self, dobj, chunk_type, chunk_args = None):
+        for name, index in self.indices.items():
+            yield from index.chunk_sizes(dobj, chunk_type, chunk_args)
 
 class Index(ParallelAnalysisInterface):
     """The base index class"""
@@ -67,18 +103,6 @@ class Index(ParallelAnalysisInterface):
         # this is implemented by subclasses
         raise NotImplementedError
 
-    def _split_fields(self, fields):
-        # This will split fields into either generated or read fields
-        fields_to_read, fields_to_generate = [], []
-        for ftype, fname in fields:
-            if fname in self.field_list or (ftype, fname) in self.field_list:
-                fields_to_read.append((ftype, fname))
-            elif fname in self.ds.derived_field_list or (ftype, fname) in self.ds.derived_field_list:
-                fields_to_generate.append((ftype, fname))
-            else:
-                raise YTFieldNotFound((ftype,fname), self.ds)
-        return fields_to_read, fields_to_generate
-
     def _read_particle_fields(self, fields, dobj, chunk = None):
         if len(fields) == 0: return {}, []
         fields_to_read, fields_to_generate = self._split_fields(fields)
@@ -112,17 +136,17 @@ class Index(ParallelAnalysisInterface):
             chunk_size)
         return fields_to_return, fields_to_generate
 
-    def _chunk(self, dobj, chunking_style, ngz = 0, **kwargs):
+    def chunk_iter(self, dobj, chunk_type, ngz = 0, **kwargs):
         # A chunk is either None or (grids, size)
         if dobj._current_chunk is None:
             self._identify_base_chunk(dobj)
-        if ngz != 0 and chunking_style != "spatial":
+        if ngz != 0 and chunk_type != "spatial":
             raise NotImplementedError
-        if chunking_style == "all":
+        if chunk_type == "all":
             return self._chunk_all(dobj, **kwargs)
-        elif chunking_style == "spatial":
+        elif chunk_type == "spatial":
             return self._chunk_spatial(dobj, ngz, **kwargs)
-        elif chunking_style == "io":
+        elif chunk_type == "io":
             return self._chunk_io(dobj, **kwargs)
         else:
             raise NotImplementedError
