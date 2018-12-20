@@ -19,7 +19,8 @@ import os
 import weakref
 
 from yt.utilities.logger import ytLogger as mylog
-from yt.geometry.geometry_handler import Index, YTDataChunk
+from yt.geometry.geometry_handler import Index
+from yt.utilities.data_chunk import YTDataChunk
 from yt.utilities.lib.mesh_utilities import smallest_fwidth
 
 class UnstructuredIndex(Index):

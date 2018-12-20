@@ -29,7 +29,7 @@ from yt.data_objects.static_output import \
     Dataset
 from yt.utilities.lib.misc_utilities import \
     get_box_grids_level
-from yt.geometry.geometry_handler import \
+from yt.utilities.data_chunk import \
     YTDataChunk
 from yt.extern.six import PY2
 

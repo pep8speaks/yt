@@ -25,7 +25,8 @@ from yt.funcs import \
     only_on_root
 from yt.utilities.logger import ytLogger as mylog
 from yt.geometry.geometry_handler import \
-    Index, \
+    Index
+from yt.utilities.data_chunk import \
     YTDataChunk
 from yt.geometry.particle_oct_container import ParticleBitmap
 from yt.data_objects.particle_container import ParticleContainer

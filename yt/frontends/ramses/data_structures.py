@@ -28,7 +28,7 @@ from yt.funcs import \
     setdefaultattr
 from yt.geometry.oct_geometry_handler import \
     OctreeIndex
-from yt.geometry.geometry_handler import \
+from yt.utilities.data_chunk import \
     YTDataChunk
 from yt.data_objects.static_output import \
     Dataset

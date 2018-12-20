@@ -41,7 +41,7 @@ from yt.data_objects.static_output import \
     ParticleFile
 from yt.frontends.sph.data_structures import \
     SPHParticleIndex
-from yt.geometry.geometry_handler import \
+from yt.utilities.data_chunk import \
     YTDataChunk
 from yt.geometry.grid_geometry_handler import \
     GridIndex

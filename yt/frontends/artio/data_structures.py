@@ -33,7 +33,8 @@ from yt.funcs import \
     mylog, \
     setdefaultattr
 from yt.geometry.geometry_handler import \
-    Index, \
+    Index
+from yt.utilities.data_chunk import \
     YTDataChunk
 import yt.geometry.particle_deposit as particle_deposit
 from yt.data_objects.static_output import \
