@@ -63,60 +63,13 @@ class BaseIOHandler(object):
         if not isinstance(self._vector_fields, dict):
             self._vector_fields = dict((field, 3) for field in self._vector_fields)
 
-    # We need a function for reading a list of sets
-    # and a function for *popping* from a queue all the appropriate sets
-    @contextmanager
-    def preload(self, chunk, fields, max_size):
-        yield self
-
-    def pop(self, grid, field):
-        if grid.id in self.queue and field in self.queue[grid.id]:
-            return self.modify(self.queue[grid.id].pop(field))
-        else:
-            # We only read the one set and do not store it if it isn't pre-loaded
-            return self._read_data_set(grid, field)
-
-    def peek(self, grid, field):
-        return self.queue[grid.id].get(field, None)
-
-    def push(self, grid, field, data):
-        if grid.id in self.queue and field in self.queue[grid.id]:
-            raise ValueError
-        self.queue[grid][field] = data
-
-    def _field_in_backup(self, grid, backup_file, field_name):
-        if os.path.exists(backup_file):
-            fhandle = h5py.File(backup_file, 'r')
-            g = fhandle["data"]
-            grid_group = g["grid_%010i" % (grid.id - grid._id_offset)]
-            if field_name in grid_group:
-                return_val = True
-            else:
-                return_val = False
-            fhandle.close()
-            return return_val
-        else:
-            return False
-
-    def _read_data_set(self, grid, field):
-        # check backup file first. if field not found,
-        # call frontend-specific io method
-        backup_filename = grid.ds.backup_filename
-        if not grid.ds.read_from_backup:
-            return self._read_data(grid, field)
-        elif self._field_in_backup(grid, backup_filename, field):
-            fhandle = h5py.File(backup_filename, 'r')
-            g = fhandle["data"]
-            grid_group = g["grid_%010i" % (grid.id - grid._id_offset)]
-            data = grid_group[field][:]
-            fhandle.close()
-            return data
-        else:
-            return self._read_data(grid, field)
-                
-    # Now we define our interface
-    def _read_data(self, grid, field):
+    def _read_chunk_fields(self, chunk, fields):
         pass
+        # We don't 
+
+    def _iter_chunks_fields(self, chunk_list, fields):
+        pass
+        yield
 
     def _read_fluid_selection(self, chunks, selector, fields, size):
         # This function has an interesting history.  It previously was mandate
@@ -146,19 +99,8 @@ class BaseIOHandler(object):
                 ind[field] += obj.select(selector, data, rv[field], ind[field])
         return rv
 
-    def _read_data_slice(self, grid, field, axis, coord):
-        sl = [slice(None), slice(None), slice(None)]
-        sl[axis] = slice(coord, coord + 1)
-        tr = self._read_data_set(grid, field)[tuple(sl)]
-        if tr.dtype == "float32": tr = tr.astype("float64")
-        return tr
-
     def _read_field_names(self, grid):
         pass
-
-    @property
-    def _read_exception(self):
-        return None
 
     def _read_chunk_data(self, chunk, fields):
         return {}
