@@ -48,6 +48,7 @@ cdef class OctreeContainer:
         # This will just initialize the root mesh octs
         self.oref = over_refine
         self.partial_coverage = partial_coverage
+        self.max_level = -1
         cdef int i, j, k, p
         for i in range(3):
             self.nn[i] = oct_domain_dimensions[i]
@@ -107,6 +108,7 @@ cdef class OctreeContainer:
         visitor.octs = cur.my_objs
         visitor.nocts = &cur.n_assigned
         visitor.nfinest = &nfinest
+        visitor.max_level = 0
         pos[0] = obj.DLE[0] + dds[0]/2.0
         for i in range(obj.nn[0]):
             pos[1] = obj.DLE[1] + dds[1]/2.0
@@ -134,6 +136,7 @@ cdef class OctreeContainer:
         if obj.nocts * visitor.nz != ref_mask.size:
             raise KeyError(ref_mask.size, obj.nocts, obj.oref,
                 obj.partial_coverage)
+        obj.max_level = visitor.max_level
         return obj
 
     def __dealloc__(self):

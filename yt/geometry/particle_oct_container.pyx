@@ -29,7 +29,6 @@ cdef class ParticleOctreeContainer(OctreeContainer):
     cdef Oct** oct_list
     #The starting oct index of each domain
     cdef np.int64_t *dom_offsets
-    cdef public int max_level
     #How many particles do we keep befor refining
     cdef public int n_ref
 

@@ -90,6 +90,7 @@ cdef class OctreeContainer:
     # The fill_style is the ordering, C or F, of the octs in the file.  "o"
     # corresponds to C, and "r" is for Fortran.
     cdef public object fill_style
+    cdef public np.int64_t max_level
 
 cdef class SparseOctreeContainer(OctreeContainer):
     cdef OctKey *root_nodes

@@ -119,6 +119,7 @@ cdef class LoadOctree(OctVisitor):
     cdef Oct* octs
     cdef np.uint64_t *nocts
     cdef np.uint64_t *nfinest
+    cdef np.uint64_t max_level
 
 cdef inline int cind(int i, int j, int k):
     # THIS ONLY WORKS FOR CHILDREN.  It is not general for zones.
